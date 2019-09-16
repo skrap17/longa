@@ -33,6 +33,8 @@ public:
     Long operator+(const Long& other);
     Long operator-(const Long& other);
     Long operator*(const Long& other);
+    Long operator<<(int n);
+    Long karatsuba(const Long& other);
     explicit operator string();
 };
 

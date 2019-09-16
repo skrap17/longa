@@ -230,4 +230,44 @@ char Long::negative_sign() const {
     return '-';
 }
 
+Long Long::operator<<(int n) {
+    for (int i = 0; i < n; i++){
+        digits = digits + '0';
+    }
+    Size += n;
+    return *this;
+}
+
+Long Long::karatsuba(const Long& other) {
+    Long res;
+    res.Size = (Size + other.Size);
+    res.digits.resize(res.Size, '0');
+
+    if (Size < 4 || other.Size < 4) {
+        return *this * other;
+    }
+    else if (digits == "0" || other.digits == "0") {
+        return Long();
+    }
+    else {
+        int m = (max(Size, other.Size) / 2);
+        Long a1(digits.substr(0, Size - m));
+        Long a0(digits.substr(Size - m));
+        Long b1(other.digits.substr(0, other.Size - m));
+        Long b0(other.digits.substr(other.Size - m));
+        //m = 6;
+
+        Long a0b0 = a0.karatsuba(b0);
+        Long a1b1 = a1.karatsuba(b1);
+        Long a0a1 = a0 + a1;
+        Long b0b1 = b0 + b1;
+
+        res = a0b0 + ((a0a1.karatsuba(b0b1) - a0b0 - a1b1) << m) + (a1b1 << (2 * m));
+
+        //res =  a0.karatsuba(b0) + (((a0 + a1).karatsuba(b0 + b1) - a0.karatsuba(b0) - a1.karatsuba(b1)) << m ) + (a1.karatsuba(b1) << ( 2 * m));
+        res.trim();
+        return res;
+    }
+}
+
 
