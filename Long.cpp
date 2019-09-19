@@ -235,7 +235,7 @@ char Long::negative_sign() const {
     return '-';
 }
 
-Long& Long::operator<<(int n) {
+Long Long::operator<<(int n) {
     if (digits != "0") {
         if (n > 0) {
             for (int i = 0; i < n; i++) {
