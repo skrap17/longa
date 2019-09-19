@@ -5,9 +5,11 @@ using namespace std;
 #include "Long.h"
 
 int main() {
-    Long a("12345");
-    Long b("1234");
-    cout << string(a) << "\n" << string(b) << "\n";
-    cout << string(a.karatsuba(b)) << "\n";
+    const Long a("12345");
+    Long b("12345");
+    cout << (a / 70);
+    //cout << a << "\n" << b << "\n";
+    //cout << a - b << "\n";
+    a.toom3(b);
     return 0;
 }

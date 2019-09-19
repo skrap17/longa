@@ -20,23 +20,32 @@ class Long {
     void set(int i, int val);
     void trim();
     bool comp_abs(const Long& other) const;
-    Long add_abs(const Long& other);
-    Long sub_abs(const Long& other);
+    Long add_abs(const Long& other) const ;
+    Long sub_abs(const Long& other) const;
 public:
     Long(string s = "0");
+    Long(int n);
     bool operator==(const Long& other);
     bool operator>(const Long& other);
     bool operator>=(const Long& other);
     bool operator<(const Long& other);
     bool operator<=(const Long& other);
     bool operator!=(const Long& other);
-    Long operator+(const Long& other);
-    Long operator-(const Long& other);
-    Long operator*(const Long& other);
-    Long operator<<(int n);
-    Long karatsuba(const Long& other);
+    Long operator+(const Long& other) const;
+    Long operator-(const Long& other) const;
+    Long operator*(const Long& other) const;
+    Long operator*(int n) const;
+    Long operator/(int n) const;
+    Long& operator<<(int n);
+    Long operator<<(int n) const;
+
+    Long karatsuba(const Long& other) const;
+    Long toom3(const Long& other) const;
     explicit operator string();
 };
+
+
+ostream& operator<<(ostream &out, Long i);
 
 
 #endif //LONGA_LONG_H

@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <cmath>
 #include "Long.h"
 
 Long::Long(string s) {
@@ -67,7 +68,7 @@ bool Long::operator!=(const Long& other) {
     return !(*this == other);
 }
 
-Long Long::add_abs(const Long &other) {
+Long Long::add_abs(const Long &other) const {
     Long res, tmp;
     if (comp_abs(other)) {
         res = *this;
@@ -120,7 +121,7 @@ Long::operator string() {
     return s + digits;
 }
 
-Long Long::sub_abs(const Long &other) {
+Long Long::sub_abs(const Long &other) const{
     Long res, tmp;
     if (comp_abs(other)) {
         res = *this;
@@ -163,7 +164,7 @@ void Long::trim() {
     }
 }
 
-Long Long::operator+(const Long &other) {
+Long Long::operator+(const Long &other) const{
     Long res;
     if (sign == other.sign){
         res = add_abs(other);
@@ -176,10 +177,12 @@ Long Long::operator+(const Long &other) {
         else
             res.sign = "+-"[string("+-").find_first_not_of(sign)];
     }
+    if (res.digits == "0")
+        res.sign = '+';
     return res;
 }
 
-Long Long::operator-(const Long &other) {
+Long Long::operator-(const Long &other) const{
     Long res;
     if (sign != other.sign) {
         res = add_abs(other);
@@ -192,10 +195,12 @@ Long Long::operator-(const Long &other) {
         else
             res.sign = negative_sign();
     }
+    if (res.digits == "0")
+        res.sign = '+';
     return res;
 }
 
-Long Long::operator*(const Long &other) {
+Long Long::operator*(const Long &other) const{
     Long res;
     if (digits == "0" || other.digits == "0"){
         return res;
@@ -230,31 +235,39 @@ char Long::negative_sign() const {
     return '-';
 }
 
-Long Long::operator<<(int n) {
-    for (int i = 0; i < n; i++){
-        digits = digits + '0';
+Long& Long::operator<<(int n) {
+    if (digits != "0") {
+        if (n > 0) {
+            for (int i = 0; i < n; i++) {
+                digits = digits + '0';
+            }
+            Size += n;
+        } else if (Size + n > 0) {
+            digits = digits.substr(0, Size + n);
+            Size = digits.size();
+        } else {
+            Size = 1;
+            digits = "0";
+        }
     }
-    Size += n;
     return *this;
 }
 
-Long Long::karatsuba(const Long& other) {
+Long Long::karatsuba(const Long& other) const{
     Long res;
     res.Size = (Size + other.Size);
     res.digits.resize(res.Size, '0');
 
-    if (Size < 4 || other.Size < 4) {
+    if (Size < 4 || other.Size < 4 || Size + other.Size < 8) {
         return *this * other;
-    }
-    else if (digits == "0" || other.digits == "0") {
-        return Long();
     }
     else {
         int m = (max(Size, other.Size) / 2);
-        Long a1(digits.substr(0, Size - m));
-        Long a0(digits.substr(Size - m));
-        Long b1(other.digits.substr(0, other.Size - m));
-        Long b0(other.digits.substr(other.Size - m));
+        const Long a1 = (*this << -m);
+        Long a0 = *this - (a1 << m);
+
+        const Long b1 = (other << -m);
+        Long b0 = other - (b1 << m);
         //m = 6;
 
         Long a0b0 = a0.karatsuba(b0);
@@ -270,4 +283,111 @@ Long Long::karatsuba(const Long& other) {
     }
 }
 
+Long::Long(int n) {
+    sign = '+';
+    if (n < 0) {
+        sign = '-';
+        n *= -1;
+    }
+    digits = to_string(n);
+    Size = digits.size();
+}
 
+Long Long::toom3(const Long &other) const{
+    Long res;
+    res.Size = (Size + other.Size);
+    res.digits.resize(res.Size, '0');
+
+    if (Size < 4 || other.Size < 4 || Size + other.Size < 8) {
+        return *this * other;
+    }
+    else {
+        int k = 3;
+        Long m[3];
+        Long n[3];
+        int B = max(floor(Size / k), floor(other.Size / k)) + 1;
+        //cout << B<<"\n";
+
+        m[2] = (*this << (- 2 * B));
+        m[1] = (*this - ((*this << (- 2 * B)) << (2 * B))) << -B;
+        m[0] = *this - ((*this << (-B)) << (B));
+
+        n[2] = (other << (- 2 * B));
+        n[1] = (other - ((other << (- 2 * B)) << (2 * B))) << -B;
+        n[0] = other - ((other << (-B)) << (B));
+
+        Long p[5];
+        Long q[5];
+        Long p0 = m[0] + m[2];
+        p[0] = m[0];
+        p[1] = p0 + m[1];
+        p[2] = p0 - m[1];
+        p[3] = p[2] + p[2] + m[2] + m[2] - m[0];
+        p[4] = m[2];
+
+        p0 = n[0] + n[2];
+        q[0] = n[0];
+        q[1] = p0 + n[1];
+        q[2] = p0 - n[1];
+        q[3] = q[2] + q[2] + n[2] + n[2] - n[0];
+        q[4] = n[2];
+
+        Long r[10];
+        for (int i = 0; i < 5; i++){
+            r[i] = p[i].toom3(q[i]);
+        }
+
+        r[5] = r[0];
+        r[9] = r[4];
+
+
+        return Long();
+    }
+}
+
+Long Long::operator<<(int n) const {
+    Long res = *this;
+    return res << n;
+}
+
+Long Long::operator*(int n) const{
+    Long res;
+    bool neg = (n < 0);
+    n = abs(n);
+    int m = Size;
+    for (int i = 1; i <= m; i++){
+       // const Long s = Long(digit(m - i) * n);
+        //cout << digit(m - i)  << " " << s << " " << (s << (i- 1)) << "\n";
+        res = res +  (Long(digit(m - i) * n) << (i - 1));
+    }
+    if (!neg xor (sign == '+'))
+        res.sign = '-';
+    //cout << "------\n";
+    return res;
+}
+
+Long Long::operator/(int n) const {
+    Long res;
+    bool neg = (n < 0);
+    n = abs(n);
+    int m = Size;
+    res.digits.resize(m, '0');
+    res.Size = m;
+    int rem = 0;
+    for (int i = 0; i < m; i++){
+        rem = rem * 10 + digit(i);
+        //rem /= n;
+        res.set(i, rem / n);
+        rem %= n;
+    }
+    if (!neg xor (sign == '+'))
+        res.sign = '-';
+    res.trim();
+    return res;
+}
+
+
+ostream &operator<<(ostream &out, Long i) {
+    out << string(i);
+    return out;
+}
