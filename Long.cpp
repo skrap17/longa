@@ -4,7 +4,9 @@
 
 #include <iostream>
 #include <cmath>
+#include<ctime>
 #include "Long.h"
+#include "Rand.h"
 
 Long::Long(string s) {
     if (s.find_first_not_of("+-0123456789") == string::npos) {
@@ -232,7 +234,7 @@ Long Long::operator*(const Long &other) const{
 char Long::negative_sign() const {
     if (sign == '+')
         return '-';
-    return '-';
+    return '+';
 }
 
 Long Long::operator<<(int n) {
@@ -318,30 +320,54 @@ Long Long::toom3(const Long &other) const{
 
         Long p[5];
         Long q[5];
-        Long p0 = m[0] + m[2];
-        p[0] = m[0];
-        p[1] = p0 + m[1];
-        p[2] = p0 - m[1];
-        p[3] = p[2] + p[2] + m[2] + m[2] - m[0];
-        p[4] = m[2];
 
-        p0 = n[0] + n[2];
-        q[0] = n[0];
-        q[1] = p0 + n[1];
-        q[2] = p0 - n[1];
-        q[3] = q[2] + q[2] + n[2] + n[2] - n[0];
-        q[4] = n[2];
-
-        Long r[10];
+        int vals[5][3] = {
+                {1, 0, 0},
+                {1, 1, 1},
+                {1, -1, 1},
+                {1, -2, 4},
+                {0, 0, 1}
+        };
         for (int i = 0; i < 5; i++){
-            r[i] = p[i].toom3(q[i]);
+            for (int j = 0; j < 3; j++){
+                p[i] = p[i] + m[j] * vals[i][j];
+                q[i] = q[i] + n[j] * vals[i][j];
+            }
         }
 
-        r[5] = r[0];
-        r[9] = r[4];
+//        for (int i = 0; i < 5; i++){
+//            cout << q[i] << ' ';
+//        }
+       // cout << '\n';
 
+        Long rv[5];
+        for (int i = 0; i < 5; i++){
+            rv[i] = p[i].toom3(q[i]);
+        }
+        Long r[5];
+        r[0] = rv[0];
+        r[4] = rv[4];
+        r[3] = (rv[3] - rv[1]) / 3;
+        r[1] = (rv[1] - rv[2]) / 2;
+        r[2] = rv[2] - rv[0];
+        r[3] = (r[2] - r[3]) / 2 + rv[4] * 2;
+        r[2] = r[2] + r[1] - r[4];
+        r[1] = r[1] - r[3];
 
-        return Long();
+        for (int i = 0; i < 5; i++){
+           // cout << r[i] << ' ';
+        }
+        //cout << '\n';
+        for (int i = 0; i < 5; i++){
+            //cout << (r[i] << (5 - i)) << ' ';
+        }
+        //cout << '\n';
+
+        for (int i = 0; i < 5; i++){
+            res = res + (r[i] << (B * i));
+        }
+        res.trim();
+        return res;
     }
 }
 
@@ -384,6 +410,43 @@ Long Long::operator/(int n) const {
         res.sign = '-';
     res.trim();
     return res;
+}
+
+Long Long::operator%(const Long &other) const {
+    Long res = *this;
+    while (res >= other){
+        res = res - other;
+    }
+    return res;
+}
+
+Long Long::pow_mod(const Long &other, const Long& modulus) const {
+    Long zero;
+    Long one = Long(1);
+    Long res = one;
+    Long count = other;
+    while (count > zero){
+        res = res * *this;
+        res = res % modulus;
+        count = count - one;
+    }
+    return res;
+}
+
+bool Long::fermat() const {
+    bool prime = true;
+    srand(time(0));
+    Rand r(rand() % 1000, *this);
+    int k = Size;
+    while (k > 0 && prime){
+        k--;
+        Long test = Long("3");
+        test = test.pow_mod(*this - 1, *this);
+        cout << test << ' ';
+        if (test != 1)
+            prime = false;
+    }
+    return prime;
 }
 
 

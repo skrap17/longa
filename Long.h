@@ -44,6 +44,7 @@ public:
     explicit operator string();
 };
 
+ostream &operator<<(ostream &out, Long i);
 
 ostream& operator<<(ostream &out, Long i);
 
