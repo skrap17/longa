@@ -8,9 +8,11 @@
 using namespace std;
 
 #include <string>
+#include "test.h"
 
 
 class Long {
+    static test *t;
     static const int base = 10;
     string digits = "0";
     char sign = '+';
@@ -22,15 +24,22 @@ class Long {
     bool comp_abs(const Long& other) const;
     Long add_abs(const Long& other) const ;
     Long sub_abs(const Long& other) const;
+    int bin_search(int a, int b, const Long& M, const Long& n) const;
 public:
+    void test(){
+        t -> mult();
+    }
+    static void set(class test *p){
+        t = p;
+    }
     Long(string s = "0");
     Long(int n);
-    bool operator==(const Long& other);
-    bool operator>(const Long& other);
-    bool operator>=(const Long& other);
-    bool operator<(const Long& other);
-    bool operator<=(const Long& other);
-    bool operator!=(const Long& other);
+    bool operator==(const Long& other) const;
+    bool operator>(const Long& other) const;
+    bool operator>=(const Long& other) const;
+    bool operator<(const Long& other) const;
+    bool operator<=(const Long& other) const;
+    bool operator!=(const Long& other) const;
     Long operator+(const Long& other) const;
     Long operator-(const Long& other) const;
     Long operator*(const Long& other) const;
@@ -45,6 +54,8 @@ public:
 };
 
 ostream &operator<<(ostream &out, Long i);
+Long GCD(const Long& first, const Long& other);
+Long Jacobi( Long n,  Long k);
 
 ostream& operator<<(ostream &out, Long i);
 

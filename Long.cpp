@@ -8,6 +8,8 @@
 #include "Long.h"
 #include "Rand.h"
 
+test* Long::t = new class test();
+
 Long::Long(string s) {
     if (s.find_first_not_of("+-0123456789") == string::npos) {
         digits = s;
@@ -35,11 +37,11 @@ bool Long::comp_abs(const Long& other) const {
     }
 }
 
-bool Long::operator==(const Long& other) {
-    return digits == other.digits;
+bool Long::operator==(const Long& other) const {
+    return digits == other.digits && sign == other.sign;
 }
 
-bool Long::operator>(const Long& other) {
+bool Long::operator>(const Long& other) const {
     if (sign == '+'){
         if (other.sign == '+')
             return comp_abs(other);
@@ -54,19 +56,19 @@ bool Long::operator>(const Long& other) {
     }
 }
 
-bool Long::operator>=(const Long& other) {
+bool Long::operator>=(const Long& other) const {
     return *this > other || *this == other;
 }
 
-bool Long::operator<(const Long& other) {
+bool Long::operator<(const Long& other) const {
     return !(*this >= other);
 }
 
-bool Long::operator<=(const Long& other) {
+bool Long::operator<=(const Long& other) const {
     return !(*this > other);
 }
 
-bool Long::operator!=(const Long& other) {
+bool Long::operator!=(const Long& other) const {
     return !(*this == other);
 }
 
@@ -137,7 +139,7 @@ Long Long::sub_abs(const Long &other) const{
     int N = res.Size;
     int i;
     int s = 0, carry = 0;
-    for (i = 1; i <= n; i++){
+    for (i = 1; (i <= n || carry != 0); i++){
         s = res.digit(N - i) - tmp.digit(n - i) - carry;
         carry = 0;
         //cout << s << " " << carry << "   ";
@@ -413,44 +415,209 @@ Long Long::operator/(int n) const {
 }
 
 Long Long::operator%(const Long &other) const {
-    Long res = *this;
-    while (res >= other){
-        res = res - other;
-    }
-    return res;
+    return (*this - (*this / other) * other);
 }
 
 Long Long::pow_mod(const Long &other, const Long& modulus) const {
-    Long zero;
-    Long one = Long(1);
-    Long res = one;
-    Long count = other;
-    while (count > zero){
-        res = res * *this;
-        res = res % modulus;
-        count = count - one;
+//    Long one = Long(1);
+//    Long res = one;
+//    Long count = other;
+//    while (count > 0){
+//        res = res * *this;
+//        res = res % modulus;
+//        count = count - one;
+//    }
+//    return res;
+    if (modulus == 1)
+        return 0;
+    Long r = 1;
+    Long b = *this % modulus;
+    Long e = other;
+    while (e > 0){
+        if (e % 2 == 1)
+            r = (r * b) % modulus;
+        e = e / 2;
+        b = (b * b) % modulus;
     }
-    return res;
+    return r;
 }
 
 bool Long::fermat() const {
+    if (*this == 2)
+        return true;
+    if (*this % 2 == 0)
+        return false;
     bool prime = true;
     srand(time(0));
-    Rand r(rand() % 1000, *this);
+    Rand r(rand() % 500, *this);
     int k = Size;
     while (k > 0 && prime){
         k--;
-        Long test = Long("3");
+        Long test = r.next();
         test = test.pow_mod(*this - 1, *this);
-        cout << test << ' ';
+        //cout << test << ' ';
         if (test != 1)
             prime = false;
     }
     return prime;
 }
 
+Long Long::operator/(const Long &other) const {
+    if (other.digits == "0")
+        return *this;
+    Long res;
+    if (*this < other)
+        return res;
+    int n = other.Size;
+    int it = Size - other.Size;
+    Long tmp = *this << (-Size + n);
+    int ind = tmp.Size;
+    while (it >= 0){
+        //cout << tmp << ' ';
+        int k = bin_search(0, base - 1, tmp, other);
+
+        res.digits += to_string(k);
+        tmp = tmp - other * k;
+        //cout << tmp << ' ';
+        tmp.digits += digits[ind];
+        ind++;
+       // cout << tmp << '\n';
+        tmp.Size++;
+        tmp.trim();
+        it--;
+    }
+
+//    while (tmp >= other) {
+//        int off = tmp.Size - n - rem;
+//        tmp << (-off);
+//        int k = bin_search(0, base - 1, tmp, other);
+//        cout << k << '\n';
+//        res.digits = res.digits + to_string(k);
+//        if (k == 0)
+//            rem = 1;
+//        else
+//            rem = 0;
+//        res.trim();
+//        Long g = other * res;
+//        tmp = *this - (g << (Size - g.Size)) ;
+//    }
+    if (sign != other.sign)
+        res.sign = '-';
+    res.trim();
+    return res;
+}
+
+int Long::bin_search(int a, int b, const Long &M, const Long &n) const {
+    if (a == b){
+        return a;
+    }
+    int c = (a + b) / 2 + 1;
+    if ( n * c > M)
+        return bin_search(a, c - 1, M, n);
+    else
+        return bin_search(c, b, M, n);
+}
+
+bool Long::sol_strass() {
+    if (*this == 2)
+        return true;
+    if (*this % 2 == 0) {
+        cout << "f";
+        return false;
+    }
+    int k = Size;
+    bool prime = true;
+    srand(time(0));
+    Rand r(rand() % 500, *this);
+    while (k > 0 && prime){
+        k--;
+        Long a = r.next();
+        while (a == 1 || a == 0){
+            a = r.next();
+        }
+        Long x = Jacobi(a, *this);
+        //cout << a << "a";
+        if (x == -1)
+            x = x + *this;
+        //cout << x << "x";
+        Long y = a.pow_mod((*this - 1) / 2, *this);
+        //cout << y << "y";
+        if (x == 0 || x != y)
+            prime = false;
+    }
+    return prime;
+}
+
+Long Long::operator%(int n) const {
+    return (*this - (*this / n) * n);
+}
+
+bool Long::rab_mil() const {
+    if (*this == 2)
+        return true;
+    if (*this % 2 == 0) {
+        cout << "f";
+        return false;
+    }
+    int r = 0;
+    Long d = *this - 1;
+    while (d % 2 == 0) {
+        d = d / 2;
+        r++;
+    }
+    int k = Size;
+    bool prime = true;
+    srand(time(0));
+    Rand rnd(rand() % 500, *this);
+    while(k > 0 && prime) {
+        k--;
+        Long a = rnd.next();
+        while (a == 1 || a == 0){
+            a = rnd.next();
+        }
+        Long x =a.pow_mod(d, *this);
+        if (x == 1 || x == *this - 1)
+            continue;
+        for (int i = 0; i < r - 1; i++) {
+            x = x.pow_mod(2, *this);
+            if (x != *this - 1)
+                prime = false;
+        }
+    }
+    return prime;
+}
+
+Long GCD(const Long& first, const Long& other){
+    if (other == 0)
+        return first;
+    return GCD(other, first % other);
+}
+
 
 ostream &operator<<(ostream &out, Long i) {
     out << string(i);
     return out;
+}
+
+Long Jacobi(Long n, Long k) {
+    n = n % k;
+    Long t = 1;
+    while (n != 0) {
+        while (n % 2 == 0) {
+            n = n / 2;
+            Long r = k % 8;
+            if (r == 3 || r == 5)
+                t = t * -1;
+        }
+        Long tmp = n;
+        n = k;
+        k = tmp;
+        if (n % 4 == 3 && k % 4 == 3)
+            t = t * -1;
+        n = n % k;
+    }
+    if (k == 1)
+        return t;
+    else
+        return 0;
 }

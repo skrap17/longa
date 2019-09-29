@@ -5,7 +5,7 @@
 #include "Rand.h"
 
 Long Rand::next() {
-    Long xnext = xn * a;
+    Long xnext = xn * a + c;
     xn = xnext % m;
     return xn;
 }

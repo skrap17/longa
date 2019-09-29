@@ -7,6 +7,7 @@
 
 #include "Long.h"
 
+
 class Rand {
     Long xn;
     int a = 11;
