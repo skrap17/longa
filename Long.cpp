@@ -8,7 +8,12 @@
 #include "Long.h"
 #include "Rand.h"
 
-test* Long::t = new class test();
+int Long::base = 10;
+Mult* Long::t = new Mult();
+
+void Long::bswitch(int b) {
+    base = b;
+}
 
 Long::Long(string s) {
     if (s.find_first_not_of("+-0123456789") == string::npos) {
@@ -25,6 +30,7 @@ Long::Long(string s) {
         Size = 1;
         sign = '+';
     }
+    binary();
 }
 
 bool Long::comp_abs(const Long& other) const {
@@ -142,16 +148,11 @@ Long Long::sub_abs(const Long &other) const{
     for (i = 1; (i <= n || carry != 0); i++){
         s = res.digit(N - i) - tmp.digit(n - i) - carry;
         carry = 0;
-        //cout << s << " " << carry << "   ";
         if (s <  0){
             s += base;
             carry = 1;
         }
-        //cout << s << " " << carry << "\n";
         res.set(N - i, s);
-    }
-    if (carry != 0){
-        res.set(N - i, res.digit(N - i) - 1);
     }
     res.trim();
     return res;
@@ -205,32 +206,33 @@ Long Long::operator-(const Long &other) const{
 }
 
 Long Long::operator*(const Long &other) const{
-    Long res;
-    if (digits == "0" || other.digits == "0"){
-        return res;
-    }
-    if (sign != other.sign)
-        res.sign = '-';
-    int N = Size + other.Size;
-    res.digits.resize(N, '0');
-    res.Size = N;
-    int n = Size, m = other.Size;
-    int mult = 0;
-    int carry = 0;
-    for (int i = 1; i <= n; i++){
-        carry = 0;
-        for (int j = 1; j <= m; j++){
-            //cout << res.digit(N - i - j + 1) << " " << digit(n - i) << " " << other.digit(m - j) << " " << carry << "\n";
-            mult = res.digit(N - i - j + 1) + digit(n - i) * other.digit(m - j) + carry;
-            carry = mult / base;
-            mult %= base;
-            //cout << mult << " " << carry << "\n";
-            res.set(N - i - j + 1, mult);
-        }
-        res.set(N - i - m, carry);
-    }
-    res.trim();
-    return res;
+//    Long res;
+//    if (digits == "0" || other.digits == "0"){
+//        return res;
+//    }
+//    if (sign != other.sign)
+//        res.sign = '-';
+//    int N = Size + other.Size;
+//    res.digits.resize(N, '0');
+//    res.Size = N;
+//    int n = Size, m = other.Size;
+//    int mult = 0;
+//    int carry = 0;
+//    for (int i = 1; i <= n; i++){
+//        carry = 0;
+//        for (int j = 1; j <= m; j++){
+//            //cout << res.digit(N - i - j + 1) << " " << digit(n - i) << " " << other.digit(m - j) << " " << carry << "\n";
+//            mult = res.digit(N - i - j + 1) + digit(n - i) * other.digit(m - j) + carry;
+//            carry = mult / base;
+//            mult %= base;
+//            //cout << mult << " " << carry << "\n";
+//            res.set(N - i - j + 1, mult);
+//        }
+//        res.set(N - i - m, carry);
+//    }
+//    res.trim();
+//    return res;
+    return t -> mult(*this, other);
 }
 
 char Long::negative_sign() const {
@@ -257,35 +259,6 @@ Long Long::operator<<(int n) {
     return *this;
 }
 
-Long Long::karatsuba(const Long& other) const{
-    Long res;
-    res.Size = (Size + other.Size);
-    res.digits.resize(res.Size, '0');
-
-    if (Size < 4 || other.Size < 4 || Size + other.Size < 8) {
-        return *this * other;
-    }
-    else {
-        int m = (max(Size, other.Size) / 2);
-        const Long a1 = (*this << -m);
-        Long a0 = *this - (a1 << m);
-
-        const Long b1 = (other << -m);
-        Long b0 = other - (b1 << m);
-        //m = 6;
-
-        Long a0b0 = a0.karatsuba(b0);
-        Long a1b1 = a1.karatsuba(b1);
-        Long a0a1 = a0 + a1;
-        Long b0b1 = b0 + b1;
-
-        res = a0b0 + ((a0a1.karatsuba(b0b1) - a0b0 - a1b1) << m) + (a1b1 << (2 * m));
-
-        //res =  a0.karatsuba(b0) + (((a0 + a1).karatsuba(b0 + b1) - a0.karatsuba(b0) - a1.karatsuba(b1)) << m ) + (a1.karatsuba(b1) << ( 2 * m));
-        res.trim();
-        return res;
-    }
-}
 
 Long::Long(int n) {
     sign = '+';
@@ -295,83 +268,9 @@ Long::Long(int n) {
     }
     digits = to_string(n);
     Size = digits.size();
+    binary();
 }
 
-Long Long::toom3(const Long &other) const{
-    Long res;
-    res.Size = (Size + other.Size);
-    res.digits.resize(res.Size, '0');
-
-    if (Size < 4 || other.Size < 4 || Size + other.Size < 8) {
-        return *this * other;
-    }
-    else {
-        int k = 3;
-        Long m[3];
-        Long n[3];
-        int B = max(floor(Size / k), floor(other.Size / k)) + 1;
-        //cout << B<<"\n";
-
-        m[2] = (*this << (- 2 * B));
-        m[1] = (*this - ((*this << (- 2 * B)) << (2 * B))) << -B;
-        m[0] = *this - ((*this << (-B)) << (B));
-
-        n[2] = (other << (- 2 * B));
-        n[1] = (other - ((other << (- 2 * B)) << (2 * B))) << -B;
-        n[0] = other - ((other << (-B)) << (B));
-
-        Long p[5];
-        Long q[5];
-
-        int vals[5][3] = {
-                {1, 0, 0},
-                {1, 1, 1},
-                {1, -1, 1},
-                {1, -2, 4},
-                {0, 0, 1}
-        };
-        for (int i = 0; i < 5; i++){
-            for (int j = 0; j < 3; j++){
-                p[i] = p[i] + m[j] * vals[i][j];
-                q[i] = q[i] + n[j] * vals[i][j];
-            }
-        }
-
-//        for (int i = 0; i < 5; i++){
-//            cout << q[i] << ' ';
-//        }
-       // cout << '\n';
-
-        Long rv[5];
-        for (int i = 0; i < 5; i++){
-            rv[i] = p[i].toom3(q[i]);
-        }
-        Long r[5];
-        r[0] = rv[0];
-        r[4] = rv[4];
-        r[3] = (rv[3] - rv[1]) / 3;
-        r[1] = (rv[1] - rv[2]) / 2;
-        r[2] = rv[2] - rv[0];
-        r[3] = (r[2] - r[3]) / 2 + rv[4] * 2;
-        r[2] = r[2] + r[1] - r[4];
-        r[1] = r[1] - r[3];
-
-        for (int i = 0; i < 5; i++){
-           // cout << r[i] << ' ';
-        }
-        //cout << '\n';
-        for (int i = 0; i < 5; i++){
-            //cout << (r[i] << (5 - i)) << ' ';
-        }
-        //cout << '\n';
-
-        for (int i = 0; i < 5; i++){
-            res = res + (r[i] << (B * i));
-        }
-        res.trim();
-        return res;
-    }
-}
 
 Long Long::operator<<(int n) const {
     Long res = *this;
@@ -419,15 +318,6 @@ Long Long::operator%(const Long &other) const {
 }
 
 Long Long::pow_mod(const Long &other, const Long& modulus) const {
-//    Long one = Long(1);
-//    Long res = one;
-//    Long count = other;
-//    while (count > 0){
-//        res = res * *this;
-//        res = res % modulus;
-//        count = count - one;
-//    }
-//    return res;
     if (modulus == 1)
         return 0;
     Long r = 1;
@@ -587,6 +477,164 @@ bool Long::rab_mil() const {
     return prime;
 }
 
+void Long::binary()  {
+    Long tmp = *this;
+    while (tmp.digits > "0") {
+        char dig = tmp.digits[tmp.Size - 1];
+        if (string("13579").find(dig) != string::npos)
+            dig = '1';
+        else
+            dig = '0';
+        bin = dig + bin;
+        tmp = tmp / 2;
+    }
+}
+
+void Long::back() {
+    int n = bin.size();
+    Long res;
+    for (int i = n; i > 0; i--) {
+        res = res + Long(2).pow(i - 1) * (int(bin[n - i]) - 48);
+    }
+    cout << res << '\n';
+}
+
+Long Long::pow(const Long &other) const {
+        Long r = 1;
+        Long b = *this;
+        Long e = other;
+        while (e > 0){
+            if (e % 2 == 1)
+                r = (r * b);
+            e = e / 2;
+            b = (b * b);
+        }
+        return r;
+}
+
+
+Long Long::cook() const{
+    int b = base;
+    bswitch(2);
+    if (Size < 2) {
+        int a = stoi(digits);
+        if (sign == '-')
+            a *= -1;
+        cout << 1 / a << '\n';
+        string s = to_string(1 / a);
+        s = s.substr(s.find('.') + 1);
+        return Long(s);
+    }
+    Long z;
+    int zd; //number of digite after floating point
+    double a = floor(32 / (4 * (int(bin[0]) - '0') + 2 * (int(bin[1]) - '0') + (int(bin[2]) - '0'))) * 0.25;
+   if (bin[1] == '0') {
+       if (bin[2] == '0') {
+           z = Long("10");
+           zd =0;
+       }
+       else {
+           z = Long("11");
+           zd = 1;
+       }
+   }
+   else {
+       if (bin[2] == '0') {
+           z = Long("101");
+           zd = 1;
+       }
+       else {
+           z = Long("1");
+           zd = 0;
+       }
+   }
+
+
+   int n = bin.size();
+   int k = 0;
+   while (::pow(2, k) < n) {
+       Long zz = z * z;
+       int zzd = 2 * zd;
+
+       int Vkd = ::pow(2, k + 1) + 3;
+       Long Vk = Long(bin.substr(0,Vkd));
+
+       Long Vzz = Vk * zz;
+       int Vzzd = Vkd + zzd;
+
+       Long z2 = z + z;
+       int z2d = zd;
+
+       if (z2d > Vzzd) {
+           Vzz << (z2d - Vzzd);
+           Vzzd = z2d;
+       }
+       else if (z2d < Vzzd){
+           z2 << (-z2d + Vzzd);
+           z2d = Vzzd;
+       }
+       if (Vzz.Size < Vzzd){
+           for (int i = 0; i < Vzzd - Vzz.Size; i++)
+               Vzz.set(-1, 0);
+       }
+
+       if (z2.Size < z2d){
+           for (int i = 0; i < z2d - z2.Size; i++)
+               z2.set(-1, 0);
+       }
+
+
+
+       z = z2 - Vzz;
+       zd = z2d;
+       while (z.digit(z.Size - 1) == 0) {
+           z << (-1);
+           zd--;
+       }
+
+//       int Powd = ::pow(2, k + 1) + 1;
+//       Long div = z;
+//       Long Pow = Long(1) << (z.Size + ::pow(2, k) - Powd);
+//       z = z + ((Pow - (z % Pow))) << (z.Size + ::pow(2, k) - Powd);
+
+       k++;
+   }
+   cout << "0.";
+   string s;
+   for (int i = 0; i < bin.size() - 1; i++) {
+       cout << '0';
+       s = s + '0';
+   }
+   cout << z << '\n';
+   s += z.digits;
+   //cout << zd << '\n';
+   bswitch(b);
+   Long res(s);
+   res.fl = s.size();
+   return res;
+}
+
+void Long::div_cook(const Long &other) {
+    //cout << bin << '\n';
+    Long inv = other.cook();
+    int n = inv.fl;
+    int b = base;
+    bswitch(2);
+    Long res = Long(bin) * inv;
+    res << (-n);
+    if (sign == '+' xor other.sign == '+')
+        res.sign = '-';
+//    int n = res.Size;
+//    Long res_d;
+//    for (int i = n; i > 0; i--) {
+//        res_d = res_d + Long(2).pow(i - 1) * (int(bin[n - i]) - 48);
+//    }
+    bswitch(b);
+    cout << res << '\n';
+}
+
+
+
 Long GCD(const Long& first, const Long& other){
     if (other == 0)
         return first;
@@ -620,4 +668,217 @@ Long Jacobi(Long n, Long k) {
         return t;
     else
         return 0;
+}
+
+istream &operator>>(istream &in, Long &a) {
+    string s;
+    in >> s;
+    a = s;
+    return in;
+}
+
+Long Toom3::toom3(const Long &a, const Long &other) const {
+    //cout << "toom\n";
+    Long res;
+    res.Size = (a.Size + other.Size);
+    res.digits.resize(res.Size, '0');
+
+    if (a.Size < 4 || other.Size < 4 || a.Size + other.Size < 8) {
+        return naive(a, other);
+    }
+    else {
+        int k = 3;
+        Long m[3];
+        Long n[3];
+        int B = max(floor(a.Size / k), floor(other.Size / k)) + 1;
+        //cout << B<<"\n";
+
+        m[2] = (a << (- 2 * B));
+        m[1] = (a - ((a << (- 2 * B)) << (2 * B))) << -B;
+        m[0] = a - ((a << (-B)) << (B));
+
+        n[2] = (other << (- 2 * B));
+        n[1] = (other - ((other << (- 2 * B)) << (2 * B))) << -B;
+        n[0] = other - ((other << (-B)) << (B));
+
+        Long p[5];
+        Long q[5];
+
+        int vals[5][3] = {
+                {1, 0, 0},
+                {1, 1, 1},
+                {1, -1, 1},
+                {1, -2, 4},
+                {0, 0, 1}
+        };
+        for (int i = 0; i < 5; i++){
+            for (int j = 0; j < 3; j++){
+                p[i] = p[i] + m[j] * vals[i][j];
+                q[i] = q[i] + n[j] * vals[i][j];
+            }
+        }
+
+//        for (int i = 0; i < 5; i++){
+//            cout << q[i] << ' ';
+//        }
+        // cout << '\n';
+
+        Long rv[5];
+        for (int i = 0; i < 5; i++){
+            rv[i] = toom3(p[i], q[i]);
+        }
+        Long r[5];
+        r[0] = rv[0];
+        r[4] = rv[4];
+        r[3] = (rv[3] - rv[1]) / 3;
+        r[1] = (rv[1] - rv[2]) / 2;
+        r[2] = rv[2] - rv[0];
+        r[3] = (r[2] - r[3]) / 2 + rv[4] * 2;
+        r[2] = r[2] + r[1] - r[4];
+        r[1] = r[1] - r[3];
+
+        for (int i = 0; i < 5; i++){
+            // cout << r[i] << ' ';
+        }
+        //cout << '\n';
+        for (int i = 0; i < 5; i++){
+            //cout << (r[i] << (5 - i)) << ' ';
+        }
+        //cout << '\n';
+
+        for (int i = 0; i < 5; i++){
+            res = res + (r[i] << (B * i));
+        }
+        res.trim();
+        return res;
+    }
+}
+
+Long Karatsuba::karatsuba(const Long &a, const Long &other) const {
+    Long res;
+    //cout << "kara\n";
+    res.Size = (a.Size + other.Size);
+    res.digits.resize(res.Size, '0');
+
+    if (a.Size < 4 || other.Size < 4 || a.Size + other.Size < 8) {
+        return naive(a, other);
+    }
+    else {
+        int m = (max(a.Size, other.Size) / 2);
+        const Long a1 = (a << -m);
+        Long a0 = a - (a1 << m);
+
+        const Long b1 = (other << -m);
+        Long b0 = other - (b1 << m);
+        //m = 6;
+
+        Long a0b0 = karatsuba(a0, b0);
+        Long a1b1 = karatsuba(a1, b1);
+        Long a0a1 = a0 + a1;
+        Long b0b1 = b0 + b1;
+
+        res = a0b0 + ((karatsuba(a0a1, b0b1) - a0b0 - a1b1) << m) + (a1b1 << (2 * m));
+
+        //res =  a0.karatsuba(b0) + (((a0 + a1).karatsuba(b0 + b1) - a0.karatsuba(b0) - a1.karatsuba(b1)) << m ) + (a1.karatsuba(b1) << ( 2 * m));
+        res.trim();
+        return res;
+    }
+}
+
+Long Mult::naive(const Long &a, const Long &other) const {
+    Long res;
+    //cout << "naive\n";
+    if (a.digits == "0" || other.digits == "0"){
+        return res;
+    }
+    if (a.sign != other.sign)
+        res.sign = '-';
+    int N = a.Size + other.Size;
+    res.digits.resize(N, '0');
+    res.Size = N;
+    int n = a.Size, m = other.Size;
+    int mult = 0;
+    int carry = 0;
+    for (int i = 1; i <= n; i++){
+        carry = 0;
+        for (int j = 1; j <= m; j++){
+            //cout << res.digit(N - i - j + 1) << " " << digit(n - i) << " " << other.digit(m - j) << " " << carry << "\n";
+            mult = res.digit(N - i - j + 1) + a.digit(n - i) * other.digit(m - j) + carry;
+            carry = mult / a.base;
+            mult %= a.base;
+            //cout << mult << " " << carry << "\n";
+            res.set(N - i - j + 1, mult);
+        }
+        res.set(N - i - m, carry);
+    }
+    res.trim();
+    return res;
+}
+
+Long Sen_strass::sen_strass(const Long &a, const Long &other) const {
+    //cout << "sen_strass\n";
+    int n = 1;
+    int s = max(a.Size, other.Size);
+    while (n < s) {
+        n <<= 1;
+    }
+    n <<= 1;
+    string first;
+    first.resize( (n - a.Size % n) % n, '0');
+    first += a.digits;
+    string second;
+    second.resize((n - other.Size % n) % n, '0');
+    second += other.digits;
+    int k1 = first.size() / n;
+    int k2 = second.size() / n;
+    vector<b> sig1(n);
+    vector<b> sig2(n);
+    for (int i = 1; i <= n; i++){
+        sig1[i - 1] = stoi(first.substr(first.size() - k1 * i, k1));
+        sig2[i - 1] = stoi(second.substr(second.size() - k2 * i, k2));
+    }
+    fft(sig1, false);
+    fft(sig2, false);
+    for (int i = 0; i < n; i++){
+        sig1[i] *= sig2[i];
+    }
+    fft(sig1, true);
+    vector<int> res(n);
+    for (int i = 0; i < n; i++) {
+        res[i] = int(sig1[i].real() + 0.5);
+    }
+    int carry = 0;
+    for (int i = 0; i < n; i++) {
+        res[i] += carry;
+        carry = res[i] / Long::base;
+        res[i] %= Long::base;
+    }
+    string re;
+    for (int i = 0; i < n; i++) {
+        re = to_string(res[i]) + re;
+    }
+    return re;
+}
+
+void Sen_strass::fft(vector<b> &a, bool invert) const {
+    int n = (int) a.size();
+    if (n == 1)  return;
+
+    vector<b> a0 (n/2),  a1 (n/2);
+    for (int i = 0, j = 0; i < n; i += 2, ++j) {
+        a0[j] = a[i];
+        a1[j] = a[i+1];
+    }
+    fft (a0, invert);
+    fft (a1, invert);
+
+    double ang = 2 * M_PI / n * (invert ? -1 : 1);
+    b w (1),  wn (cos(ang), sin(ang));
+    for (int i = 0; i < n / 2; ++i) {
+        a[i] = a0[i] + w * a1[i];
+        a[i + n / 2] = a0[i] - w * a1[i];
+        if (invert)
+            a[i] /= 2,  a[i + n / 2] /= 2;
+        w *= wn;
+    }
 }
