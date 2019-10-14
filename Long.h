@@ -11,17 +11,19 @@ using namespace std;
 #include <iostream>
 #include <complex>
 #include <vector>
+#include <tuple>
 class Mult;
-
 class Long {
+    friend Long abs(const Long& a);
     friend class Mult;
     friend class Karatsuba;
     friend class Toom3;
     friend class Sen_strass;
+    friend class Modular;
 protected:
     static Mult *t;
     static int base;
-
+    string bin = "";
     string digits = "0";
     void binary();
     char sign = '+';
@@ -34,17 +36,14 @@ protected:
     Long add_abs(const Long& other) const ;
     Long sub_abs(const Long& other) const;
     int bin_search(int a, int b, const Long& M, const Long& n) const;
-    int fl = 0;
+    static void bswitch(int b);
+    Long naive(const Long &other) const;
 public:
     static void set(Mult *p){
         t = p;
     }
-
     Long(string s = "0");
     Long(int n);
-    string bin = "";
-    void back();
-    static void bswitch(int b);
     bool operator==(const Long& other) const;
     bool operator>(const Long& other) const;
     bool operator>=(const Long& other) const;
@@ -58,10 +57,14 @@ public:
     Long operator/(int n) const;
     Long& operator<<(int n);
     Long operator<<(int n) const;
-
-    Long karatsuba(const Long& other) const;
-    Long toom3(const Long& other) const;
-    explicit operator string();
+    Long pow(const Long& other) const;
+    Long pow_mod(const Long& other, const Long& modulus) const;
+    bool fermat() const;
+    bool rab_mil() const;
+    bool sol_strass() ;
+    string cook(bool decimal = true) const;
+    Long div_cook(const Long& other);
+    operator string();
 };
 
 
@@ -71,11 +74,11 @@ ostream &operator<<(ostream &out, Long i);
 istream& operator>> (istream& in, Long& a);
 Long GCD(const Long& first, const Long& other);
 Long Jacobi( Long n,  Long k);
-
+Long abs(const Long& a);
 
 class Mult{
 public:
-    Long naive(const Long& a, const Long& other) const;;
+    Long naive(const Long& a, const Long& other) const;
 
     virtual Long mult(const Long& a, const Long& other) const {
         return naive(a, other);
@@ -105,6 +108,20 @@ private:
     typedef complex<double> b;
     void fft(vector<b> &a, bool invert) const;
 };
+
+class Modular: public Mult {
+    Long modular(const Long& a, const Long& other) const;
+    virtual Long mult(const Long& a, const Long& other) const {
+        return modular(a, other);
+    };
+private:
+    int q(int k) const;
+    vector<Long> m(int k) const;
+    Long gcdex (Long a, Long b, Long & x, Long & y) const;
+    Long inv_mod(Long a, Long m) const;
+};
+
+
 
 ostream& operator<<(ostream &out, Long i);
 
